@@ -11,11 +11,15 @@ object GitManager {
         targetDir: File,
         token: String,
         branch: String = "main",
-        onProgress: (String, Int) -> Unit = { _, _ -> }
+        onProgress: (String, Int) -> Unit = { _, _ -> },
+        force: Boolean = false
     ): Result<File> {
         return try {
-            if (targetDir.exists()) {
-                return Result.failure(Exception("目标目录已存在: ${targetDir.absolutePath}"))
+            if (force && targetDir.exists()) {
+                targetDir.deleteRecursively()
+            }
+            if (targetDir.exists() && (targetDir.listFiles()?.isNotEmpty() == true)) {
+                return Result.failure(Exception("目标目录已存在且非空: ${targetDir.absolutePath}"))
             }
 
             val credentialsProvider = UsernamePasswordCredentialsProvider(token, "")
@@ -48,8 +52,6 @@ object GitManager {
                     override fun endTask() {}
 
                     override fun isCancelled(): Boolean = false
-
-                    override fun showDuration(enabled: Boolean) {}
                 })
 
             val git = cloneCommand.call()

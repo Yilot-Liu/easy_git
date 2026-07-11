@@ -11,6 +11,7 @@ interface GitHubApiService {
     @POST("https://github.com/login/oauth/access_token")
     @FormUrlEncoded
     suspend fun getAccessToken(
+        @Header("Accept") accept: String = "application/json",
         @Field("client_id") clientId: String,
         @Field("client_secret") clientSecret: String,
         @Field("code") code: String,

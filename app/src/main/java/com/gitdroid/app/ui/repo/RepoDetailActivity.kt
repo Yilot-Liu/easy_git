@@ -1,9 +1,11 @@
 package com.gitdroid.app.ui.repo
 
+import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.gitdroid.app.GitDroidApp
@@ -25,20 +27,50 @@ class RepoDetailActivity : AppCompatActivity() {
     private var language: String? = null
     private var stars: Int = 0
     private var branch: String = "main"
-    private var targetPath: File = File(
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-        "GitDroid"
-    )
+
+    private var selectedParentDir: File? = null
+
+    private lateinit var pickDirectoryLauncher: ActivityResultLauncher<Uri?>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityRepoDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        pickDirectoryLauncher = registerForActivityResult(
+            ActivityResultContracts.OpenDocumentTree()
+        ) { uri ->
+            if (uri != null) {
+                val picked = resolveSafPick(uri)
+                if (picked != null) {
+                    selectedParentDir = picked
+                }
+                updateTargetPath()
+            }
+        }
+
         extractIntentExtras()
         setupToolbar()
         populateRepoInfo()
         setupButtons()
+    }
+
+    private fun appPrivateSafDirName(uri: Uri): String {
+        val raw = uri.lastPathSegment?.substringAfterLast('/')?.substringAfter(':') ?: "pick"
+        val safe = raw.replace(Regex("[^A-Za-z0-9_\\-]"), "_").ifBlank { "pick" }
+        return "saf-picks/$safe"
+    }
+
+    private fun resolveSafPick(uri: Uri): File? {
+        try {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        } catch (_: Exception) {
+        }
+        return File(getExternalFilesDir(null) ?: filesDir, appPrivateSafDirName(uri))
     }
 
     private fun extractIntentExtras() {
@@ -65,8 +97,11 @@ class RepoDetailActivity : AppCompatActivity() {
 
     private fun setupButtons() {
         binding.btnSelectPath.setOnClickListener {
-            targetPath = File(targetPath, repoName.substringAfter("/"))
-            updateTargetPath()
+            try {
+                pickDirectoryLauncher.launch(null)
+            } catch (e: Exception) {
+                Toast.makeText(this, "无法启动目录选择器: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         }
 
         binding.btnClone.setOnClickListener {
@@ -78,9 +113,14 @@ class RepoDetailActivity : AppCompatActivity() {
         }
     }
 
+    private fun currentParentDir(): File =
+        selectedParentDir ?: File(getExternalFilesDir(null) ?: filesDir, "GitDroid")
+
+    private fun currentRepoDir(): File =
+        File(currentParentDir(), repoName.substringAfter("/"))
+
     private fun updateTargetPath() {
-        val repoDir = File(targetPath, repoName.substringAfter("/"))
-        binding.tvTargetPath.text = repoDir.absolutePath
+        binding.tvTargetPath.text = currentRepoDir().absolutePath
     }
 
     private fun performClone() {
@@ -90,7 +130,29 @@ class RepoDetailActivity : AppCompatActivity() {
             return
         }
 
-        val repoDir = File(targetPath, repoName.substringAfter("/"))
+        val repoDir = currentRepoDir()
+
+        if (repoDir.exists() && (repoDir.listFiles()?.isNotEmpty() == true)) {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("目录已存在")
+                .setMessage("目标目录已存在且不为空：\n${repoDir.absolutePath}\n请选择操作")
+                .setPositiveButton("覆盖克隆") { _, _ ->
+                    executeClone(force = true)
+                }
+                .setNeutralButton("拉取更新") { _, _ ->
+                    performPull()
+                }
+                .setNegativeButton("取消", null)
+                .show()
+            return
+        }
+
+        executeClone(force = false)
+    }
+
+    private fun executeClone(force: Boolean) {
+        val token = GitDroidApp.instance.authManager.getToken() ?: return
+        val repoDir = currentRepoDir()
 
         binding.progressBar.visibility = View.VISIBLE
         binding.btnClone.isEnabled = false
@@ -113,7 +175,8 @@ class RepoDetailActivity : AppCompatActivity() {
                                 "$percent%"
                             }
                         }
-                    }
+                    },
+                    force = force
                 )
             }
 
@@ -145,7 +208,7 @@ class RepoDetailActivity : AppCompatActivity() {
             return
         }
 
-        val repoDir = File(targetPath, repoName.substringAfter("/"))
+        val repoDir = currentRepoDir()
 
         if (!GitManager.isGitRepo(repoDir)) {
             Toast.makeText(this, "仓库尚未克隆，请先克隆", Toast.LENGTH_SHORT).show()
