@@ -106,7 +106,7 @@ class RepoDetailActivity : AppCompatActivity() {
                     token = token,
                     branch = branch,
                     onProgress = { task, percent ->
-                        withContext(Dispatchers.Main) {
+                        runOnUiThread {
                             binding.tvStatus.text = if (task.isNotEmpty()) {
                                 "$task - $percent%"
                             } else {
@@ -164,7 +164,7 @@ class RepoDetailActivity : AppCompatActivity() {
                     repoDir = repoDir,
                     token = token,
                     onProgress = { task, percent ->
-                        withContext(Dispatchers.Main) {
+                        runOnUiThread {
                             binding.tvStatus.text = if (task.isNotEmpty()) {
                                 "$task - $percent%"
                             } else {

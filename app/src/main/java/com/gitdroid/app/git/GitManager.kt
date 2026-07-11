@@ -48,6 +48,8 @@ object GitManager {
                     override fun endTask() {}
 
                     override fun isCancelled(): Boolean = false
+
+                    override fun showDuration(enabled: Boolean) {}
                 })
 
             val git = cloneCommand.call()
