@@ -32,8 +32,8 @@ jobs:
 
       - name: 创建 local.properties（注入 GitHub OAuth 凭据）
         run: |
-          echo "github.client.id=${{ secrets.GITHUB_CLIENT_ID }}" >> local.properties
-          echo "github.client.secret=${{ secrets.GITHUB_CLIENT_SECRET }}" >> local.properties
+          echo "github.client.id=${{ secrets.OAUTH_CLIENT_ID }}" >> local.properties
+          echo "github.client.secret=${{ secrets.OAUTH_CLIENT_SECRET }}" >> local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> local.properties
 
       - name: 构建 Debug APK
