@@ -21,11 +21,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 授权 gradlew
-        run: chmod +x gradlew
-
       - name: 设置 Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: 设置 Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.12'
 
       - name: 创建 local.properties（注入 GitHub OAuth 凭据）
         run: |
@@ -34,7 +36,7 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> local.properties
 
       - name: 构建 Debug APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: gradle assembleDebug --no-daemon
 
       - name: 上传 APK
         uses: actions/upload-artifact@v4
