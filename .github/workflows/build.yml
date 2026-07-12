@@ -1,0 +1,40 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:       # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 授权 gradlew
+        run: chmod +x gradlew
+
+      - name: 创建 local.properties（注入 GitHub OAuth 凭据）
+        run: |
+          echo "github.client.id=${{ secrets.GITHUB_CLIENT_ID }}" >> local.properties
+          echo "github.client.secret=${{ secrets.GITHUB_CLIENT_SECRET }}" >> local.properties
+          echo "sdk.dir=$ANDROID_HOME" >> local.properties
+
+      - name: 构建 Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: 上传 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GitDroid-Debug
+          path: app/build/outputs/apk/debug/app-debug.apk
