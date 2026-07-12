@@ -11,4 +11,16 @@
     <style name="Theme.GitDroid.Toolbar" parent="ThemeOverlay.Material3.ActionBar">
         <item name="android:textColorPrimary">@color/on_primary</item>
     </style>
+
+    <style name="Theme.GitDroid.ProgressDialog" parent="Theme.Material3.Light.Dialog">
+        <item name="android:windowMinWidthMajor">85%</item>
+        <item name="android:windowMinWidthMinor">85%</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+    </style>
+
+    <style name="ShapeAppearance.GitDroid.Logo" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">24dp</item>
+    </style>
 </resources>

@@ -4,11 +4,12 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.snackbar.Snackbar
 import com.gitdroid.app.GitDroidApp
 import com.gitdroid.app.R
+import com.gitdroid.app.data.api.NetUtil
 import com.gitdroid.app.databinding.ActivityLoginBinding
 import com.gitdroid.app.ui.repo.RepoListActivity
 import kotlinx.coroutines.launch
@@ -39,6 +40,10 @@ class LoginActivity : AppCompatActivity() {
 
     private fun setupViews() {
         binding.btnLogin.setOnClickListener {
+            if (!NetUtil.isOnline(this)) {
+                Snackbar.make(binding.root, R.string.error_no_network, Snackbar.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
             binding.progressBar.visibility = View.VISIBLE
             binding.btnLogin.isEnabled = false
             authManager.launchOAuth(this)
@@ -52,11 +57,15 @@ class LoginActivity : AppCompatActivity() {
             if (code != null) {
                 exchangeCodeForToken(code)
             } else {
-                Toast.makeText(this, R.string.login_failed, Toast.LENGTH_SHORT).show()
-                binding.progressBar.visibility = View.GONE
-                binding.btnLogin.isEnabled = true
+                showError(getString(R.string.login_failed))
             }
         }
+    }
+
+    private fun showError(msg: String) {
+        Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
+        binding.progressBar.visibility = View.GONE
+        binding.btnLogin.isEnabled = true
     }
 
     private fun exchangeCodeForToken(code: String) {
@@ -67,17 +76,11 @@ class LoginActivity : AppCompatActivity() {
             val result = authManager.exchangeCodeForToken(code)
             result.fold(
                 onSuccess = {
-                    Toast.makeText(this@LoginActivity, "登录成功", Toast.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, "登录成功", Snackbar.LENGTH_SHORT).show()
                     navigateToRepoList()
                 },
                 onFailure = { e ->
-                    Toast.makeText(
-                        this@LoginActivity,
-                        "${getString(R.string.login_failed)}: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    binding.progressBar.visibility = View.GONE
-                    binding.btnLogin.isEnabled = true
+                    showError(NetUtil.friendlyMessage(this@LoginActivity, e))
                 }
             )
         }

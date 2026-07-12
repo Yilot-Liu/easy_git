@@ -3,11 +3,11 @@ package com.gitdroid.app.ui.repo
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.snackbar.Snackbar
 import com.gitdroid.app.GitDroidApp
 import com.gitdroid.app.R
 import com.gitdroid.app.data.model.GitHubRepo
@@ -88,7 +88,9 @@ class RepoListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.errorMessage.collect { message ->
                 message?.let {
-                    Toast.makeText(this@RepoListActivity, it, Toast.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG)
+                        .setAction(R.string.retry) { viewModel.loadRepos() }
+                        .show()
                 }
             }
         }

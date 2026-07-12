@@ -12,4 +12,21 @@
     <color name="error">#FFB3261E</color>
     <color name="text_secondary">#FF757575</color>
     <color name="divider">#FFE0E0E0</color>
+
+    <!-- Git 文件状态徽章 -->
+    <color name="badge_modified">#FFFB8C00</color>
+    <color name="badge_added">#FF43A047</color>
+    <color name="badge_deleted">#FFE53935</color>
+    <color name="badge_untracked">#FF9E9E9E</color>
+    <color name="badge_conflicted">#FFB3261E</color>
+
+    <color name="staged_text">#FF2E7D32</color>
+    <color name="unstaged_text">#FFEF6C00</color>
+
+    <color name="card_stroke">#FFEDEDED</color>
+    <color name="warning">#FFE65100</color>
+    <color name="success">#FF2E7D32</color>
+    <color name="info">#FF1976D2</color>
+    <color name="badge_text_light">#FFFFFFFF</color>
+    <color name="progress_track">#FFE0E0E0</color>
 </resources>

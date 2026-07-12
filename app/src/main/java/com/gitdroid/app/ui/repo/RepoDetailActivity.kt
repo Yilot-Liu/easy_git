@@ -1,17 +1,26 @@
 package com.gitdroid.app.ui.repo
 
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.gitdroid.app.GitDroidApp
 import com.gitdroid.app.R
 import com.gitdroid.app.databinding.ActivityRepoDetailBinding
+import com.gitdroid.app.data.api.NetUtil
 import com.gitdroid.app.git.GitManager
+import com.gitdroid.app.ui.common.GitProgressDialog
+import com.gitdroid.app.ui.workspace.RepoWorkspaceActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,6 +41,118 @@ class RepoDetailActivity : AppCompatActivity() {
 
     private lateinit var pickDirectoryLauncher: ActivityResultLauncher<Uri?>
 
+    private lateinit var manageStorageLauncher: ActivityResultLauncher<Intent>
+
+    private lateinit var writeStorageLauncher: ActivityResultLauncher<String>
+
+    private var pendingWriteAction: (() -> Unit)? = null
+
+    private var progressDialog: GitProgressDialog? = null
+
+    private fun ensureOnline(): Boolean {
+        if (!NetUtil.isOnline(this)) {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.error_offline_title)
+                .setMessage(R.string.error_offline_message)
+                .setPositiveButton(R.string.retry) { _, _ -> }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            return false
+        }
+        return true
+    }
+
+    private fun ensureWritableTarget(): Boolean {
+        val dir = currentParentDir()
+        if (isPublicMediaDir(dir)) {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.path_public_dir_unsupported)
+                .setMessage(R.string.path_public_dir_message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return false
+        }
+        if (isUnderSharedStorage(dir) && !hasAllFilesAccess()) {
+            promptEnableAllFilesAccess()
+            return false
+        }
+        if (needsWriteStoragePermission() && !hasWriteStoragePermission()) {
+            pendingWriteAction = null
+            Toast.makeText(this, R.string.write_storage_required, Toast.LENGTH_LONG).show()
+            writeStorageLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            return false
+        }
+        val probe = probeWritable(dir)
+        if (!probe.writable) {
+            val detail = getString(
+                R.string.target_not_writable,
+                dir.absolutePath,
+                getReadableAccessState(),
+                probe.reason
+            )
+            binding.tvStatus.visibility = View.VISIBLE
+            binding.tvStatus.setTextColor(getColor(R.color.error))
+            binding.tvStatus.text = detail
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.target_not_writable_title)
+                .setMessage(detail)
+                .setPositiveButton(R.string.select_directory) { _, _ -> pickDirectoryLauncher.launch(null) }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            return false
+        }
+        return true
+    }
+
+    private data class ProbeResult(val writable: Boolean, val reason: String)
+
+    private fun probeWritable(dir: File): ProbeResult {
+        return try {
+            if (!dir.exists() && !dir.mkdirs()) {
+                return ProbeResult(false, "mkdirs 返回 false（可能无权限或路径受限）")
+            }
+            val test = File(dir, ".gitdroid_probe_${System.currentTimeMillis()}")
+            if (!test.createNewFile()) {
+                return ProbeResult(false, "无法在该目录创建文件")
+            }
+            test.delete()
+            ProbeResult(true, "")
+        } catch (e: Exception) {
+            ProbeResult(false, e.javaClass.simpleName + ": " + (e.message ?: ""))
+        }
+    }
+
+    private fun getReadableAccessState(): String {
+        val flags = mutableListOf<String>()
+        flags += "Android API: ${Build.VERSION.SDK_INT} (${Build.VERSION.RELEASE ?: "?"})"
+        flags += if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (Environment.isExternalStorageManager()) "所有文件访问权限: 已授权" else "所有文件访问权限: 未授权"
+        } else {
+            "所有文件访问权限: 不适用(API<30)"
+        }
+        return flags.joinToString("\n")
+    }
+
+    private fun showProgress(title: String) {
+        if (progressDialog == null) {
+            progressDialog = GitProgressDialog(this)
+        }
+        progressDialog?.apply {
+            setTitle(title)
+            setIndeterminate(true)
+            if (!isShowing) show()
+        }
+    }
+
+    private fun dismissProgress() {
+        progressDialog?.takeIf { it.isShowing }?.dismiss()
+    }
+
+    override fun onDestroy() {
+        dismissProgress()
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityRepoDetailBinding.inflate(layoutInflater)
@@ -43,22 +164,59 @@ class RepoDetailActivity : AppCompatActivity() {
             if (uri != null) {
                 val picked = resolveSafPick(uri)
                 if (picked != null) {
+                    if (isPublicMediaDir(picked)) {
+                        Toast.makeText(this, R.string.path_public_dir_unsupported, Toast.LENGTH_LONG).show()
+                        selectedParentDir = null
+                        updateTargetPath()
+                        return@registerForActivityResult
+                    }
                     selectedParentDir = picked
+                    val inSharedStorage = isUnderSharedStorage(picked)
+                    if (inSharedStorage && !hasAllFilesAccess()) {
+                        promptEnableAllFilesAccess()
+                    } else {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.selected_path, picked.absolutePath),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                } else {
+                    Toast.makeText(this, R.string.path_resolve_failed, Toast.LENGTH_LONG).show()
                 }
                 updateTargetPath()
             }
+        }
+
+        manageStorageLauncher = registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (hasAllFilesAccess()) {
+                Toast.makeText(this, R.string.storage_permission_granted, Toast.LENGTH_SHORT).show()
+                updateTargetPath()
+            } else {
+                Toast.makeText(this, R.string.storage_permission_denied, Toast.LENGTH_LONG).show()
+                selectedParentDir = null
+                updateTargetPath()
+            }
+        }
+
+        writeStorageLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (granted) {
+                Toast.makeText(this, R.string.storage_permission_granted, Toast.LENGTH_SHORT).show()
+                pendingWriteAction?.invoke()
+            } else {
+                Toast.makeText(this, R.string.write_storage_denied, Toast.LENGTH_LONG).show()
+            }
+            pendingWriteAction = null
         }
 
         extractIntentExtras()
         setupToolbar()
         populateRepoInfo()
         setupButtons()
-    }
-
-    private fun appPrivateSafDirName(uri: Uri): String {
-        val raw = uri.lastPathSegment?.substringAfterLast('/')?.substringAfter(':') ?: "pick"
-        val safe = raw.replace(Regex("[^A-Za-z0-9_\\-]"), "_").ifBlank { "pick" }
-        return "saf-picks/$safe"
     }
 
     private fun resolveSafPick(uri: Uri): File? {
@@ -70,7 +228,85 @@ class RepoDetailActivity : AppCompatActivity() {
             )
         } catch (_: Exception) {
         }
-        return File(getExternalFilesDir(null) ?: filesDir, appPrivateSafDirName(uri))
+        return pathFromSafUri(uri)
+    }
+
+    private fun pathFromSafUri(uri: Uri): File? {
+        val docId = try {
+            android.provider.DocumentsContract.getTreeDocumentId(uri)
+        } catch (e: Exception) {
+            return null
+        }
+        if (!docId.startsWith("primary:")) {
+            val parts = docId.split(":")
+            if (parts.size == 2) {
+                val storage = Environment.getExternalStorageDirectory().absolutePath
+                val rel = parts[1]
+                return if (rel.isBlank()) File(storage) else File(storage, rel)
+            }
+            return null
+        }
+        val rel = docId.substringAfter("primary:", "")
+        val external = Environment.getExternalStorageDirectory().absolutePath
+        val path = if (rel.isBlank()) external else "$external/$rel"
+        return File(path)
+    }
+
+    private fun isUnderSharedStorage(file: File): Boolean {
+        val external = Environment.getExternalStorageDirectory().absolutePath
+        return file.absolutePath.startsWith(external)
+    }
+
+    private fun isPublicMediaDir(file: File): Boolean {
+        val external = Environment.getExternalStorageDirectory().absolutePath
+        val rel = file.absolutePath.removePrefix(external).removePrefix("/")
+        val top = rel.substringBefore("/").lowercase()
+        return top in setOf(
+            "download", "documents", "pictures", "dcim",
+            "movies", "music", "audiobooks", "recordings"
+        )
+    }
+
+    private fun hasAllFilesAccess(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return Environment.isExternalStorageManager()
+        }
+        return true
+    }
+
+    private fun needsWriteStoragePermission(): Boolean {
+        return Build.VERSION.SDK_INT <= Build.VERSION_CODES.P && isUnderSharedStorage(currentParentDir())
+    }
+
+    private fun hasWriteStoragePermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun promptEnableAllFilesAccess() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.storage_permission_title)
+            .setMessage(R.string.storage_permission_message)
+            .setPositiveButton(R.string.grant) { _, _ ->
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                        .setData(Uri.parse("package:$packageName"))
+                    manageStorageLauncher.launch(intent)
+                } catch (_: Exception) {
+                    try {
+                        manageStorageLauncher.launch(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                    } catch (_: Exception) {
+                        Toast.makeText(this, R.string.storage_open_settings_failed, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel) { _, _ ->
+                selectedParentDir = null
+                updateTargetPath()
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun extractIntentExtras() {
@@ -111,6 +347,19 @@ class RepoDetailActivity : AppCompatActivity() {
         binding.btnPull.setOnClickListener {
             performPull()
         }
+
+        binding.btnWorkspace.setOnClickListener {
+            openWorkspace()
+        }
+    }
+
+    private fun openWorkspace() {
+        val intent = Intent(this, RepoWorkspaceActivity::class.java).apply {
+            putExtra(RepoWorkspaceActivity.EXTRA_REPO_NAME, repoName)
+            putExtra(RepoWorkspaceActivity.EXTRA_PARENT_DIR, currentParentDir().absolutePath)
+            putExtra(RepoWorkspaceActivity.EXTRA_REPO_SEGMENT, repoName.substringAfter("/"))
+        }
+        startActivity(intent)
     }
 
     private fun currentParentDir(): File =
@@ -151,14 +400,16 @@ class RepoDetailActivity : AppCompatActivity() {
     }
 
     private fun executeClone(force: Boolean) {
+        if (!ensureOnline()) return
+        if (!ensureWritableTarget()) return
         val token = GitDroidApp.instance.authManager.getToken() ?: return
         val repoDir = currentRepoDir()
 
-        binding.progressBar.visibility = View.VISIBLE
         binding.btnClone.isEnabled = false
         binding.btnPull.isEnabled = false
         binding.tvStatus.visibility = View.VISIBLE
         binding.tvStatus.text = getString(R.string.cloning)
+        showProgress(getString(R.string.cloning))
 
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
@@ -169,6 +420,8 @@ class RepoDetailActivity : AppCompatActivity() {
                     branch = branch,
                     onProgress = { task, percent ->
                         runOnUiThread {
+                            progressDialog?.setIndeterminate(false)
+                            progressDialog?.update(task, percent)
                             binding.tvStatus.text = if (task.isNotEmpty()) {
                                 "$task - $percent%"
                             } else {
@@ -180,28 +433,29 @@ class RepoDetailActivity : AppCompatActivity() {
                 )
             }
 
-            binding.progressBar.visibility = View.GONE
+            dismissProgress()
             binding.btnClone.isEnabled = true
             binding.btnPull.isEnabled = true
 
             result.fold(
                 onSuccess = {
                     binding.tvStatus.text = getString(R.string.clone_success)
+                    binding.tvStatus.setTextColor(getColor(R.color.success))
                     Toast.makeText(this@RepoDetailActivity, R.string.clone_success, Toast.LENGTH_SHORT).show()
                 },
                 onFailure = { e ->
-                    binding.tvStatus.text = "${getString(R.string.clone_failed)}: ${e.message}"
-                    Toast.makeText(
-                        this@RepoDetailActivity,
-                        "${getString(R.string.clone_failed)}: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    val msg = NetUtil.friendlyMessage(this@RepoDetailActivity, e)
+                    binding.tvStatus.text = "${getString(R.string.clone_failed)}: $msg"
+                    binding.tvStatus.setTextColor(getColor(R.color.error))
+                    Toast.makeText(this@RepoDetailActivity, msg, Toast.LENGTH_LONG).show()
                 }
             )
         }
     }
 
     private fun performPull() {
+        if (!ensureOnline()) return
+        if (!ensureWritableTarget()) return
         val token = GitDroidApp.instance.authManager.getToken()
         if (token == null) {
             Toast.makeText(this, "未登录，请先登录", Toast.LENGTH_SHORT).show()
@@ -215,11 +469,11 @@ class RepoDetailActivity : AppCompatActivity() {
             return
         }
 
-        binding.progressBar.visibility = View.VISIBLE
         binding.btnClone.isEnabled = false
         binding.btnPull.isEnabled = false
         binding.tvStatus.visibility = View.VISIBLE
         binding.tvStatus.text = getString(R.string.pulling)
+        showProgress(getString(R.string.pulling))
 
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
@@ -228,6 +482,8 @@ class RepoDetailActivity : AppCompatActivity() {
                     token = token,
                     onProgress = { task, percent ->
                         runOnUiThread {
+                            progressDialog?.setIndeterminate(false)
+                            progressDialog?.update(task, percent)
                             binding.tvStatus.text = if (task.isNotEmpty()) {
                                 "$task - $percent%"
                             } else {
@@ -238,22 +494,21 @@ class RepoDetailActivity : AppCompatActivity() {
                 )
             }
 
-            binding.progressBar.visibility = View.GONE
+            dismissProgress()
             binding.btnClone.isEnabled = true
             binding.btnPull.isEnabled = true
 
             result.fold(
                 onSuccess = { status ->
                     binding.tvStatus.text = "${getString(R.string.pull_success)}: $status"
+                    binding.tvStatus.setTextColor(getColor(R.color.success))
                     Toast.makeText(this@RepoDetailActivity, status, Toast.LENGTH_SHORT).show()
                 },
                 onFailure = { e ->
-                    binding.tvStatus.text = "${getString(R.string.pull_failed)}: ${e.message}"
-                    Toast.makeText(
-                        this@RepoDetailActivity,
-                        "${getString(R.string.pull_failed)}: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    val msg = NetUtil.friendlyMessage(this@RepoDetailActivity, e)
+                    binding.tvStatus.text = "${getString(R.string.pull_failed)}: $msg"
+                    binding.tvStatus.setTextColor(getColor(R.color.error))
+                    Toast.makeText(this@RepoDetailActivity, msg, Toast.LENGTH_LONG).show()
                 }
             )
         }

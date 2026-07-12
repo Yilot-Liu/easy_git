@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.gitdroid.app.GitDroidApp
+import com.gitdroid.app.data.api.NetUtil
 import com.gitdroid.app.data.model.GitHubRepo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +35,7 @@ class RepoListViewModel(application: Application) : AndroidViewModel(application
                     _repos.value = repoList
                 },
                 onFailure = { e ->
-                    _errorMessage.value = e.message ?: "加载失败"
+                    _errorMessage.value = NetUtil.friendlyMessage(getApplication(), e)
                 }
             )
 

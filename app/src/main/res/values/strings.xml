@@ -16,4 +16,44 @@
     <string name="pulling">正在拉取…</string>
     <string name="login_failed">登录失败</string>
     <string name="network_error">网络错误</string>
+
+    <string name="processing">处理中…</string>
+    <string name="error_no_network">无网络连接，请检查网络后重试</string>
+    <string name="error_timeout">请求超时，请稍后重试</string>
+    <string name="error_ssl">SSL/证书校验失败，可能存在网络劫持</string>
+    <string name="error_connect_failed">无法连接到服务器</string>
+    <string name="error_unauthorized">认证失败，请重新登录</string>
+    <string name="error_forbidden">没有权限执行该操作</string>
+    <string name="error_not_found">资源不存在</string>
+    <string name="error_rate_limit">请求过于频繁，已触发限流，请稍后再试</string>
+    <string name="error_server">服务器异常，请稍后再试</string>
+    <string name="retry">重试</string>
+    <string name="error_offline_title">网络不可用</string>
+    <string name="error_offline_message">当前无网络连接，部分功能不可用</string>
+
+    <string name="selected_path">已选择：%1$s</string>
+    <string name="path_resolve_failed">无法解析所选目录的真实路径，请改选内部存储下的目录</string>
+    <string name="storage_permission_title">需要“所有文件访问权限”</string>
+    <string name="storage_permission_message">克隆到外部共享目录（如 Download、Documents）需要授予“所有文件访问权限”，否则只能克隆到 app 私有目录。\n\n点击授予后将跳转到系统设置，请开启该应用的开关并返回。</string>
+    <string name="storage_permission_granted">已获得存储权限，可开始克隆</string>
+    <string name="storage_permission_denied">未授予权限，将克隆到 app 私有目录</string>
+    <string name="storage_open_settings_failed">无法打开系统设置，请手动到设置中开启“所有文件访问权限”</string>
+    <string name="grant">去授权</string>
+
+    <string name="path_public_dir_unsupported">不支持克隆到该目录</string>
+    <string name="path_public_dir_message">系统公共媒体目录（Download、Documents、Pictures 等）受 Scoped Storage 限制，无法用 Git 直接写入。\n\n请改选外部存储根下自建目录，例如「内部存储 / GitRepos」。\n点击「选择目录」后在 SAF 中选根目录或自建一个 GitRepos 文件夹即可。</string>
+    <string name="target_not_writable_title">目标目录不可写</string>
+    <string name="target_not_writable">路径：%1$s\n\n%2$s\n失败原因：%3$s</string>
+    <string name="write_storage_required">需要存储写入权限，正在请求…</string>
+    <string name="write_storage_denied">未授予存储写入权限，无法克隆到该目录</string>
+
+    <string name="workspace">工作区</string>
+    <string name="refresh">刷新</string>
+    <string name="section_changes">文件改动</string>
+    <string name="working_tree_clean">工作区干净，没有改动</string>
+    <string name="stage_all">全部暂存</string>
+    <string name="commit">提交</string>
+    <string name="commit_message_hint">输入提交信息…</string>
+    <string name="push">推送</string>
+    <string name="push_confirm">确认将本地提交推送到远程仓库？</string>
 </resources>

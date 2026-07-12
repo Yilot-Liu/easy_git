@@ -36,18 +36,19 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/card_stroke">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:id="@+id/tvRepoName"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textColor="@color/on_surface"
                         android:textSize="20sp"
@@ -55,27 +56,40 @@
 
                     <TextView
                         android:id="@+id/tvRepoDescription"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:textColor="@color/text_secondary"
                         android:textSize="14sp" />
 
-                    <TextView
-                        android:id="@+id/tvRepoLanguage"
-                        android:layout_width="wrap_content"
+                    <com.google.android.material.chip.ChipGroup
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textColor="@color/primary"
-                        android:textSize="13sp" />
+                        android:layout_marginTop="12dp"
+                        app:chipSpacingHorizontal="8dp"
+                        app:singleLine="false">
 
-                    <TextView
-                        android:id="@+id/tvRepoStars"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/tvRepoLanguage"
+                            style="@style/Widget.Material3.Chip.Assist"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/primary"
+                            app:chipBackgroundColor="@color/primary_light"
+                            app:chipIconVisible="true"
+                            app:iconStartPadding="6dp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/tvRepoStars"
+                            style="@style/Widget.Material3.Chip.Assist"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/warning"
+                            app:chipBackgroundColor="@color/surface"
+                            app:chipIcon="@android:drawable/btn_star_big_off"
+                            app:chipIconVisible="true"
+                            app:iconStartPadding="6dp" />
+                    </com.google.android.material.chip.ChipGroup>
 
                 </LinearLayout>
 
@@ -85,14 +99,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/card_stroke">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -104,19 +119,24 @@
 
                     <TextView
                         android:id="@+id/tvTargetPath"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="6dp"
+                        android:background="@color/background"
+                        android:fontFamily="monospace"
+                        android:padding="12dp"
                         android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
+                        android:textSize="12sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSelectPath"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/select_directory" />
+                        android:layout_marginTop="12dp"
+                        android:text="@string/select_directory"
+                        app:icon="@android:drawable/ic_menu_set_as"
+                        app:iconGravity="textStart" />
 
                 </LinearLayout>
 
@@ -135,10 +155,12 @@
                     android:layout_weight="1"
                     android:text="@string/clone"
                     android:textSize="16sp"
-                    app:cornerRadius="12dp" />
+                    app:cornerRadius="14dp"
+                    app:icon="@android:drawable/ic_menu_save"
+                    app:iconGravity="textStart" />
 
                 <View
-                    android:layout_width="16dp"
+                    android:layout_width="12dp"
                     android:layout_height="0dp" />
 
                 <com.google.android.material.button.MaterialButton
@@ -149,27 +171,58 @@
                     android:layout_weight="1"
                     android:text="@string/pull"
                     android:textSize="16sp"
-                    app:cornerRadius="12dp" />
+                    app:cornerRadius="14dp"
+                    app:icon="@android:drawable/ic_popup_sync"
+                    app:iconGravity="textStart" />
 
             </LinearLayout>
 
-            <ProgressBar
-                android:id="@+id/progressBar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="16dp"
-                android:visibility="gone" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnWorkspace"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/workspace"
+                android:textSize="15sp"
+                app:cornerRadius="14dp"
+                app:icon="@android:drawable/ic_menu_edit"
+                app:iconGravity="textStart" />
 
-            <TextView
-                android:id="@+id/tvStatus"
-                android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="14sp"
-                android:visibility="gone" />
+                android:layout_marginTop="16dp"
+                android:visibility="visible"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="1dp"
+                app:strokeColor="@color/card_stroke">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <ProgressBar
+                        android:id="@+id/progressBar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/tvStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
 

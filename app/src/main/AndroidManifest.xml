@@ -47,6 +47,10 @@
             android:name=".ui.repo.RepoDetailActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.workspace.RepoWorkspaceActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
