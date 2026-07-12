@@ -73,6 +73,12 @@ esac
 
 CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
+# Gradle 8+ 需要 shared jar 才能运行
+WRAPPER_SHARED=$( ls -d "$APP_HOME"/gradle/wrapper/gradle-wrapper-shared-*.jar 2>/dev/null || true )
+if [ -n "$WRAPPER_SHARED" ]; then
+    CLASSPATH="$CLASSPATH:$WRAPPER_SHARED"
+fi
+
 
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
