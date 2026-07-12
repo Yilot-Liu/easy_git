@@ -27,7 +27,7 @@ jobs:
       - name: 设置 Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.12'
+          gradle-version: '9.4.1'
 
       - name: 创建 local.properties（注入 GitHub OAuth 凭据）
         run: |
