@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 主节点（圆形） -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,38m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+    <!-- 子节点（圆形） -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,68m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+    <!-- 竖线连接 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,45v16" />
+    <!-- 分支线（横线） -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M61,60v-16c0,-2.2 -1.8,-4 -4,-4h-1v-2" />
+    <!-- 分支末端小圆 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:pathData="M68,60m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+</vector>
